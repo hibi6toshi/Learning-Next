@@ -20,3 +20,26 @@
 
 **CSSモジュールの利点**
 CSSクラスをデフォルトでコンポーネントにローカルにスコープする方法を提供し、モジュール性を向上させ、スタイルの競合のリスクを軽減します。
+
+## clsx ライブラリをクラスネームを切り替えるために追加する
+
+clsx はクラス名を簡単に切り替えることができるライブラリです。
+次のように条件付きでクラスを適用できます。
+
+```TypeScript: /app/ui/invoices/status.tsx
+import clsx from 'clsx';
+
+export default function InvoiceStatus({ status }: { status: string }) {
+  return (
+    <span
+      className={clsx(
+        'inline-flex items-center rounded-full px-2 py-1 text-sm',
+        {
+          'bg-gray-100 text-gray-500': status === 'pending',
+          'bg-green-500 text-white': status === 'paid',
+        },
+      )}
+    >
+    // ...
+)}
+```
