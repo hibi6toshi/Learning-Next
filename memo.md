@@ -182,3 +182,35 @@ const {
   totalPendingInvoices,
 } = await fetchCardData(); // wait for fetchLatestInvoices() to finish
 ```
+
+## 並列データフェッチ
+
+ウォーターフォールを回避する一般的な方法は、すべてのデータ要求を同時に、つまり並行して開始することです。
+JavaScriptでは、すべての Promise を同時に開始するために`Promise.all()`または`Promise.allSettled()`が使えます。たとえば、 `data.ts`では、次の`Promise.all()` `fetchCardData()`関数を使用しています。
+
+````javascript:app/lib/data.ts
+export async function fetchCardData() {
+  try {
+    const invoiceCountPromise = sql`SELECT COUNT(*) FROM invoices`;
+    const customerCountPromise = sql`SELECT COUNT(*) FROM customers`;
+    const invoiceStatusPromise = sql`SELECT
+         SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
+         SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
+         FROM invoices`;
+
+    const data = await Promise.all([
+      invoiceCountPromise,
+      customerCountPromise,
+      invoiceStatusPromise,
+    ]);
+    // ...
+  }
+}```
+````
+
+このパターンを使用すると、次のことが可能になります。
+
+- すべてのデータフェッチの実行を同時に開始すると、パフォーマンスの向上につながる可能性があります。
+- 任意のライブラリまたはフレームワークに適用できるネイティブ JavaScript パターンを使用します。
+
+ただし、この JavaScriptパターンのみに依存することには欠点が1つあります。1つのデータクエストが他のすべてのデータリクエストよりも遅い場合はどうなるでしょうか。
