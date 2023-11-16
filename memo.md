@@ -159,3 +159,26 @@ import { sql } from '@vercel/postgres';
 任意のサーバー コンポーネント内でsqlを呼び出すことができます。ただし、コンポーネントをより簡単にナビゲートできるように、すべてのデータ クエリを`data.ts`ファイル内に保持しており、それらをコンポーネントにインポートできます。
 
 ## ダッシュボード概要ページのデータの取得
+
+ただし...注意しなければならないことが 2 つあります。
+
+- データ リクエストは意図せずに相互にブロックし、リクエストウォーターフォールを作成します。
+- デフォルトでは、Next.js はパフォーマンスを向上させるためにルートを事前レンダリングします。これは静的レンダリングと呼ばれます。したがって、データが変更されても、ダッシュボードには反映されません。
+
+## リクエスト ウォーターフォールとは何ですか?
+
+「ウォーターフォール」とは、前のリクエストの完了に依存する一連のネットワークリクエストを指します。データフェッチの場合、各リクエストは、前のリクエストがデータを返した後にのみ開始できます。
+![](sequential-parallel-data-fetching.avif)
+
+たとえば、実行を開始するfetchRevenue()前に実行を待つ必要があるfetchLatestInvoices()などです。
+
+```javascript:app/dashboard/page.tsx
+const revenue = await fetchRevenue();
+const latestInvoices = await fetchLatestInvoices(); // wait for fetchRevenue() to finish
+const {
+  numberOfInvoices,
+  numberOfCustomers,
+  totalPaidInvoices,
+  totalPendingInvoices,
+} = await fetchCardData(); // wait for fetchLatestInvoices() to finish
+```
