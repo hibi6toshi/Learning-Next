@@ -133,3 +133,84 @@ Next.js では、<Link />コンポーネントを使用してアプリケーシ�
 ## アクティブなリンクを表示する
 
 `usePathname()`はフックなので、`nav-links.tsx`をクライアントコンポーネントに変える必要があります。React の`"use client"`ディレクティブをファイルの先頭に追加し、`next/navigation`を`usePathname()`からインポートします。
+
+# Chapter7
+
+## サーバーコンポーネントを使用したデータのフェッチ
+
+デフォルトでは、Next.js アプリケーションは**React Server Components**を使用します。サーバーコンポーネントを使用したデータの取得は比較的新しいアプローチであり、サーバーコンポーネントを使用することにはいくつかの利点があります。
+
+- サーバーコンポーネントは Promise をサポートし、データのフェッチなどの非同期タスクに対するよりシンプルなソリューションを提供します。`useEffect``useState`やデータ取得ライブラリ`async/await`に手を伸ばさずに構文を使用できます。
+- サーバーコンポーネン トはサーバー上で実行されるため、高価なデータのフェッチとロジックをサーバー上に保持し、結果のみをクライアントに送信できます。
+- 前述したように、サーバーコンポーネントはサーバー上で実行されるため、追加のAPIレイヤーを使用せずにデータベースに直接クエリを実行できます。
+
+## SQLの使用
+
+Vercel Postgres SDK はSQLインジェクションに対する保護を提供します。
+
+`/app/lib/data.ts`に移動すると、@vercel/postgresからsql機能 をインポートしていることがわかります。この関数を使用すると、データベースにクエリを実行できます。
+
+```javascript:
+import { sql } from '@vercel/postgres';
+
+// ...
+```
+
+任意のサーバー コンポーネント内でsqlを呼び出すことができます。ただし、コンポーネントをより簡単にナビゲートできるように、すべてのデータ クエリを`data.ts`ファイル内に保持しており、それらをコンポーネントにインポートできます。
+
+## ダッシュボード概要ページのデータの取得
+
+ただし...注意しなければならないことが 2 つあります。
+
+- データ リクエストは意図せずに相互にブロックし、リクエストウォーターフォールを作成します。
+- デフォルトでは、Next.js はパフォーマンスを向上させるためにルートを事前レンダリングします。これは静的レンダリングと呼ばれます。したがって、データが変更されても、ダッシュボードには反映されません。
+
+## リクエスト ウォーターフォールとは何ですか?
+
+「ウォーターフォール」とは、前のリクエストの完了に依存する一連のネットワークリクエストを指します。データフェッチの場合、各リクエストは、前のリクエストがデータを返した後にのみ開始できます。
+![](sequential-parallel-data-fetching.avif)
+
+たとえば、実行を開始するfetchRevenue()前に実行を待つ必要があるfetchLatestInvoices()などです。
+
+```javascript:app/dashboard/page.tsx
+const revenue = await fetchRevenue();
+const latestInvoices = await fetchLatestInvoices(); // wait for fetchRevenue() to finish
+const {
+  numberOfInvoices,
+  numberOfCustomers,
+  totalPaidInvoices,
+  totalPendingInvoices,
+} = await fetchCardData(); // wait for fetchLatestInvoices() to finish
+```
+
+## 並列データフェッチ
+
+ウォーターフォールを回避する一般的な方法は、すべてのデータ要求を同時に、つまり並行して開始することです。
+JavaScriptでは、すべての Promise を同時に開始するために`Promise.all()`または`Promise.allSettled()`が使えます。たとえば、 `data.ts`では、次の`Promise.all()` `fetchCardData()`関数を使用しています。
+
+````javascript:app/lib/data.ts
+export async function fetchCardData() {
+  try {
+    const invoiceCountPromise = sql`SELECT COUNT(*) FROM invoices`;
+    const customerCountPromise = sql`SELECT COUNT(*) FROM customers`;
+    const invoiceStatusPromise = sql`SELECT
+         SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
+         SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
+         FROM invoices`;
+
+    const data = await Promise.all([
+      invoiceCountPromise,
+      customerCountPromise,
+      invoiceStatusPromise,
+    ]);
+    // ...
+  }
+}```
+````
+
+このパターンを使用すると、次のことが可能になります。
+
+- すべてのデータフェッチの実行を同時に開始すると、パフォーマンスの向上につながる可能性があります。
+- 任意のライブラリまたはフレームワークに適用できるネイティブ JavaScript パターンを使用します。
+
+ただし、この JavaScriptパターンのみに依存することには欠点が1つあります。1つのデータクエストが他のすべてのデータリクエストよりも遅い場合はどうなるでしょうか。
