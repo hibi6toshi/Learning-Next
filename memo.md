@@ -457,3 +457,7 @@ if (term) {
 - ユーザーが検索バーに入力すると、入力が`params.toString()`で URLに適した形式に変換されます。
 - `replace(${pathname}?${params.toString()})`でURLをユーザーの検索データで更新します。たとえば、ユーザーが「Lee」を検索したとすると、URLは`/dashboard/invoices?query=lee`になります。
 - Next.js のクライアント側ナビゲーションのおかげで、URL はページをリロードしなくても更新されます (これについては、ページ間のナビゲーションに関する章で学習しました)。
+
+## URL と入力の同期を維持する
+
+入力フィールドがURLと同期し、共有時にデータが入力されるようにするには、`defaultValue`以下から読み取ることで`searchParams`を`input`に渡すことができます。
