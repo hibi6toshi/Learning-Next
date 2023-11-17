@@ -422,3 +422,38 @@ URL を入力フィールドと同期させてください。
 - `<input>`- これは検索入力です。
 
 新しい`handleSearch`関数を作成し、`<input>`要素に`onChange`リスナーを追加します。入力値が変化するたびに`onChange`が`handleSearch`を呼び出します。
+
+## 2.検索パラメータを使用してURLを更新します
+
+`'next/navigation'`から`useSearchParams`フックをインポートし、変数に割り当てます。
+
+`handleSearch`の内部で、新しい`searchParams`変数を使用する、`URLSearchParams`を新規作成します。
+
+```javascript:
+  function handleSearch(term: string) {
+    const params = new URLSearchParams(searchParams);
+  }
+```
+
+`URLSearchParams`は、URLクエリパラメーターを操作するためのユーティリティメソッドを提供する Web API です。複雑な文字列リテラルを作成する代わりに、それを使用して のような params 文字列を取得できます`?page=1&query=a`。
+
+次に、ユーザーの入力に基づいた params 文字列を`set`します。入力が空の場合は、次のように`delete`します。
+
+```javascript:
+if (term) {
+  params.set("query", term);
+} else {
+  params.delete("query");
+}
+```
+
+これでクエリ文字列が得られました。Next.jsuseRouterとusePathnameフックを使用して URL を更新できます。
+
+`useRouter`と`usePathname`を`next/navigation`からインポートし、`handleSearch`の中で`useRouter()`の`replace`メソッドを使用します。
+
+何が起こっているかの内訳は次のとおりです。
+
+- `${pathname}`あなたの場合、現在のパスです`"/dashboard/invoices"`。
+- ユーザーが検索バーに入力すると、入力が`params.toString()`で URLに適した形式に変換されます。
+- `replace(${pathname}?${params.toString()})`でURLをユーザーの検索データで更新します。たとえば、ユーザーが「Lee」を検索したとすると、URLは`/dashboard/invoices?query=lee`になります。
+- Next.js のクライアント側ナビゲーションのおかげで、URL はページをリロードしなくても更新されます (これについては、ページ間のナビゲーションに関する章で学習しました)。
