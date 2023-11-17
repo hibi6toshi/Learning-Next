@@ -470,3 +470,9 @@ if (term) {
 ページ コンポーネントはという prop を受け入れるsearchParamsため、現在の URL パラメータを<Table>コンポーネントに渡すことができます。
 
 クライアントサイドでparamsを読み込みたい場合は、useSearchParamsフックを使う。
+
+## ベストプラクティス: デバウンス
+
+おめでとう！Next.js で検索を実装しました。しかし、それを最適化するためにできることはあります。
+
+`handleSearch`関数内に`console.log`を追加します。
