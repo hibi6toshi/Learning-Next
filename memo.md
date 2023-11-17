@@ -488,3 +488,40 @@ function handleSearch(term: string) {
   // ...
 }
 ```
+
+デバウンスは、関数が起動できる速度を制限するプログラミング手法です。この例では、ユーザーが入力をやめたときにのみデータベースにクエリを実行する必要があります。
+
+デバウンスの仕組み:
+
+1. トリガーイベント: デバウンスする必要があるイベント (検索ボックスのキーストロークなど) が発生すると、タイマーが開始します。
+2. 待機: タイマーが期限切れになる前に新しいイベントが発生すると、タイマーはリセットされます。
+3. 実行: タイマーがカウントダウンの終わりに達すると、デバウンス関数が実行されます。
+
+デバウンスは、独自のデバウンス関数を手動で作成するなど、いくつかの方法で実装できます。物事を簡単にするために、`use-debounce`
+というライブラリを使用します。
+
+```
+npm i use-debounce
+```
+
+```javascript:
+// ...
+import { useDebouncedCallback } from "use-debounce";
+
+// Inside the Search Component...
+const handleSearch = useDebouncedCallback((term) => {
+  console.log(`Searching... ${term}`);
+
+  const params = new URLSearchParams(searchParams);
+  if (term) {
+    params.set("query", term);
+  } else {
+    params.delete("query");
+  }
+  replace(`${pathname}?${params.toString()}`);
+}, 300);
+```
+
+この関数は`handleSearch`の内容をラップし、ユーザーが入力をやめてから特定の時間 (300 ミリ秒) が経過した後にのみコードを実行します。
+
+次に、検索バーに再度入力し、開発ツールでコンソールを開きます。次の内容が表示されるはずです。
