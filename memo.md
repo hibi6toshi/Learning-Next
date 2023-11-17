@@ -476,3 +476,15 @@ if (term) {
 おめでとう！Next.js で検索を実装しました。しかし、それを最適化するためにできることはあります。
 
 `handleSearch`関数内に`console.log`を追加します。
+
+キーストロークごとに URL を更新するため、キーストロークごとにデータベースにクエリを実行することになります。私たちのアプリケーションは小さいため、これは問題ではありませんが、アプリケーションに数千人のユーザーがいて、各ユーザーがキーストロークごとに新しいリクエストをデータベースに送信すると想像してください。
+
+```JavaScript:
+function handleSearch(term: string) {
+  console.log(`searching... ${term}`);
+
+  const params = new URLSearchParams(searchParams);
+
+  // ...
+}
+```
