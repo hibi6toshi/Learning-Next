@@ -1127,3 +1127,29 @@ Web 開発では、認証と認可は異なる役割を果たします。
 認証とは、ユーザーが本人であることを確認することです。ユーザー名やパスワードなど、自分が持っているもので自分の身元を証明することになります。
 次のステップは認可です。ユーザーの身元が確認されると、認可によってアプリケーションのどの部分の使用が許可されるかが決定されます。
 したがって、認証によってユーザーが誰であるかが確認され、認可によってアプリケーション内で実行できる内容やアクセスできる内容が決まります。
+
+## ログインルートの作成
+
+アプリケーションに `/login`という新しいルートを作成し、次のコードを貼り付けます。
+
+```JavaScript: app/login/page.tsx
+import AcmeLogo from '@/app/ui/acme-logo';
+import LoginForm from '@/app/ui/login-form';
+
+export default function LoginPage() {
+  return (
+    <main className="flex items-center justify-center md:h-screen">
+      <div className="relative mx-auto flex w-full max-w-[400px] flex-col space-y-2.5 p-4 md:-mt-32">
+        <div className="flex h-20 w-full items-end rounded-lg bg-blue-500 p-3 md:h-36">
+          <div className="w-32 text-white md:w-36">
+            <AcmeLogo />
+          </div>
+        </div>
+        <LoginForm />
+      </div>
+    </main>
+  );
+}
+```
+
+`LoginForm`については後で説明します。
