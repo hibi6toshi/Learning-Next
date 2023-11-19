@@ -539,3 +539,32 @@ const handleSearch = useDebouncedCallback((term) => {
 次に、`totalPagesprop` を`<Pagination/>`コンポーネントに渡します。
 
 `<Pagination/>`コンポーネントに移動し、`usePathname`フックと`useSearchParams`フックをインポートします。これを使用して現在のページを取得し、新しいページを設定します。
+
+# Chapter12
+
+## サーバーアクションとは何ですか?
+
+React Server Actions を使用すると、サーバー上で非同期コードを直接実行できます。データを変更するために APIエンドポイントを作成する必要がなくなります。代わりに、サーバー上で実行され、クライアント コンポーネントまたはサーバー コンポーネントから呼び出すことができる非同期関数を作成します。
+
+Web アプリケーションはさまざまな脅威に対して脆弱になる可能性があるため、セキュリティは最優先事項です。ここでサーバー アクションが登場します。サーバー アクションは、さまざまな種類の攻撃から保護し、データを保護し、承認されたアクセスを保証する、効果的なセキュリティ ソリューションを提供します。サーバー アクションは、POST リクエスト、暗号化されたクロージャ、厳格な入力チェック、エラー メッセージのハッシュ化、ホスト制限などの技術を通じてこれを実現し、すべて連携してアプリの安全性を大幅に強化します。
+
+## サーバーアクションでのフォームの使用
+
+React では、`<form>`要素内の`action`属性を使用してアクションを呼び出すことができます。アクションはキャプチャされたデータを含むネイティブ`FormData`を自動的に受け取ります。
+
+```JavaScript:
+// Server Component
+export default function Page() {
+  // Action
+  async function create(formData: FormData) {
+    'use server';
+
+    // Logic to mutate data...
+  }
+
+  // Invoke the action using the "action" attribute
+  return <form action={create}>...</form>;
+}
+```
+
+サーバー コンポーネント内でサーバー アクションを呼び出すことの利点は、段階的な機能拡張です。クライアントで JavaScript が無効になっている場合でもフォームは機能します。
