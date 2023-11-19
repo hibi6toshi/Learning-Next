@@ -736,3 +736,37 @@ export default function EditInvoiceForm({
 4. 変数を SQL クエリに渡します。
 5. `revalidatePath`でクライアントキャッシュをクリアし、新しいサーバーリクエストを行うために呼び出します。
 6. `redirect`をユーザーを請求書のページにリダイレクトするために呼び出します。
+
+## 請求書の削除
+
+サーバー アクションを使用して請求書を削除するには、`<form>`要素で削除ボタンをラップし、`bind`を使用して`id`をサーバー アクションに渡します。
+
+```JavaScript: /app/ui/invoices/buttons.tsx
+import { deleteInvoice } from '@/app/lib/actions';
+
+// ...
+
+export function DeleteInvoice({ id }: { id: string }) {
+  const deleteInvoiceWithId = deleteInvoice.bind(null, id);
+
+  return (
+    <form action={deleteInvoiceWithId}>
+      <button className="rounded-md border p-2 hover:bg-gray-100">
+        <span className="sr-only">Delete</span>
+        <TrashIcon className="w-4" />
+      </button>
+    </form>
+  );
+}
+```
+
+`actions.tsx`に`deleteInvoice`を定義します。
+
+```JavaScript
+export async function deleteInvoice(id: string) {
+  await sql`DELETE FROM invoices WHERE id = ${id}`;
+  revalidatePath('/dashboard/invoices');
+}
+```
+
+このアクションは`/dashboard/invoices`パス内で呼び出されているため、 `redirect`を呼び出す必要はありません。`revalidatePath`を呼び出すと、新しいサーバー要求がトリガーされ、テーブルが再レンダリングされます。
