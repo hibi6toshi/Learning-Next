@@ -691,3 +691,48 @@ Next.jsを使用すると、正確なセグメント名が分からず、デー�
 
 インクリメントキー (1、2、3 など) の代わりに UUID を使用します。これにより URL が長くなります。ただし、UUID は ID 衝突のリスクを排除し、グローバルに一意であり、列挙型攻撃のリスクを軽減するため、大規模なデータベースに最適です。
 ただし、よりクリーンな URL を好む場合は、自動インクリメントキーを使用することをお勧めします。
+
+### 4. idをサーバーアクションに渡す
+
+最後に、データベース内の適切なレコードを更新できるように、を`id`サーバーアクションに渡します。次のように `id`を引数として渡すことはできません。
+
+```JavaScript: /app/ui/invoices/edit-form.tsx
+// Passing an id as argument won't work
+<form action={updateInvoice(id)}>
+```
+
+代わりに、JS の`bind`を使用して`id`をサーバー アクションに渡すことができます。これにより、サーバーアクションに渡されるすべての値が確実にエンコードされます。
+
+```JavaScript: /app/ui/invoices/edit-form.tsx
+// ...
+import { updateInvoice } from '@/app/lib/actions';
+
+export default function EditInvoiceForm({
+  invoice,
+  customers,
+}: {
+  invoice: InvoiceForm;
+  customers: CustomerField[];
+}) {
+  const updateInvoiceWithId = updateInvoice.bind(null, invoice.id);
+
+  return (
+    <form action={updateInvoiceWithId}>
+      <input type="hidden" name="id" value={invoice.id} />
+    </form>
+  );
+}
+```
+
+注:フォーム内で非表示の入力フィールドを使用することもできます (例<input type="hidden" name="id" value={invoice.id} />)。ただし、値は HTML ソースにフルテキストとして表示されるため、ID などの機密データには理想的ではありません。
+
+`actions.ts`ファイル内に新しいアクションを作成します`updateInvoice`。
+
+`createInvoice`アクションと同様に、次のようになります。
+
+1. `formData`からデータを抽出しています。
+2. Zod を使用して型を検証します。
+3. 金額をセントに変換します。
+4. 変数を SQL クエリに渡します。
+5. `revalidatePath`でクライアントキャッシュをクリアし、新しいサーバーリクエストを行うために呼び出します。
+6. `redirect`をユーザーを請求書のページにリダイレクトするために呼び出します。
