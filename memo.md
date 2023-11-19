@@ -607,3 +607,11 @@ export default function Form({
 ```
 
 サーバー アクションは舞台裏で`POST`API エンドポイントを作成します。これが、サーバー アクションを使用するときに API エンドポイントを手動で作成する必要がない理由です。
+
+### 3. `formData`からデータを抽出
+
+`actions.ts`ファイルに戻り、 `formData`の値を抽出する必要があります。いくつかの方法があります。この例では`.get(name)`方法を使います。。
+[FormData API](https://developer.mozilla.org/en-US/docs/Web/API/FormData/append)
+
+ヒント:多くのフィールドがあるフォームを使用している場合は、JavaScriptの`Object.fromEntries()`の`entries()` を使えます。例えば：
+const rawFormData = Object.fromEntries(formData.entries())
