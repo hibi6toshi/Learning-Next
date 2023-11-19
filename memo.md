@@ -807,3 +807,305 @@ error.tsxのコードについては、いくつか気づくことがありま�
 ![](not-found-file.avif)
 
 これは心に留めておくべきことであり、`notFound`は`error.tsx`より優先されるため、より具体的なエラーを処理したい場合にこれを利用できます。
+
+# Chapter14
+
+アクセシビリティの向上
+
+前の章では、エラー (404 エラーを含む) を捕捉し、ユーザーにフォールバックを表示する方法について説明しました。ただし、パズルのもう1つのピースであるフォーム検証についてはまだ議論する必要があります。`useFormState`アクセシビリティを念頭に置きながら、サーバーアクションを使用してサーバー側の検証を実装する方法と、フックを使用してフォームエラーを表示する方法を見てみましょう。
+
+## アクセシビリティとは何ですか?
+
+アクセシビリティとは、障害のある人を含む誰もが使用できる Web アプリケーションを設計および実装することを指します。これは、キーボード ナビゲーション、セマンティック HTML、画像、色、ビデオなど、多くの領域をカバーする広大なトピックです。
+
+このコースではアクセシビリティについては詳しく説明しませんが、Next.js で利用できるアクセシビリティ機能と、アプリケーションのアクセシビリティを高めるための一般的な実践方法について説明します。
+
+## Next.js で ESLint アクセシビリティ プラグインを使用する
+
+デフォルトでは、Next.js には`eslint-plugin-jsx-a11y`が含まれています。これはアクセシビリティの問題を早期に発見するのに役立つプラグインです。たとえば、このプラグインは、`alt`テキストのない画像がある場合や `aria-*` や `role` 属性が間違って使用されている場合などに警告します。
+
+これがどのように機能するかを見てみましょう!
+
+`package.json`ファイルに`next lint`をスクリプトとして追加します 。
+
+```json
+"scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "seed": "node -r dotenv/config ./scripts/seed.js",
+    "start": "next start",
+    "lint": "next lint"
+},
+```
+
+次に、ターミナルで次のコマンド`npm run lint`を実行します。
+
+```
+npm run lint
+```
+
+## フォームのアクセシビリティの向上
+
+フォームのアクセシビリティを向上させるために、すでに次の 3 つのことを行っています。
+
+- セマンティック HTML :`<div>`の代わりにセマンティック要素 ( `<input>`、`<option>`など) を使用します。これにより、支援技術 (AT) が入力要素に焦点を当て、適切なコンテキスト情報をユーザーに提供できるようになり、フォームのナビゲーションと理解が容易になります。
+- ラベリング: `<label>`や、`htmlFor`属性を含むことで、各フォーム フィールドに説明的なテキスト ラベルが付けられます。これにより、コンテキストが提供されることで AT サポートが向上し、ユーザーがラベルをクリックして対応する入力フィールドにフォーカスできるようになり、使いやすさも向上します。
+- フォーカスアウトライン: フィールドは、フォーカスがあるときにアウトラインを表示するように適切にスタイル設定されます。これは、ページ上のアクティブな要素を視覚的に示し、キーボード ユーザーとスクリーン リーダー ユーザーの両方がフォーム上のどこにいるかを理解するのに役立つため、アクセシビリティにとって重要です。これを確認するには、`tab` を押します。
+
+## フォームの検証
+
+http://localhost:3000/dashboard/invoices/createに移動します。をクリックし、空のフォームを送信します。何が起こりますか？
+エラーが発生します。これは、空のフォーム値をサーバー アクションに送信しているためです。これを防ぐには、クライアントまたはサーバーでフォームを検証します。
+
+## クライアント側の検証
+
+クライアントでフォームを検証するには、いくつかの方法があります。最も簡単な方法は、フォーム内の`<input>`や`<select>`要素に`required`属性を追加することにより、ブラウザーが提供するフォーム検証に依存することです。
+例えば：
+
+```JavaScript: app/ui/invoices/create-form.tsx
+<input
+  id="amount"
+  name="amount"
+  type="number"
+  placeholder="Enter USD amount"
+  className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
+  // add
+  required
+/>
+```
+
+フォームを再度送信するさい、空の値を含むフォームを送信しようとすると、ブラウザに警告が表示されます。
+一部の AT はブラウザー検証をサポートしているため、このアプローチは通常は問題ありません。
+クライアント側の検証の代替手段は、サーバー側の検証です。次のセクションでそれを実装する方法を見てみましょう。ここでは、required属性を追加した場合は削除します。
+
+## サーバー側の検証
+
+サーバー上のフォームを検証することで、次のことが可能になります。
+
+- データをデータベースに送信する前に、データが予期された形式であることを確認してください。
+- 悪意のあるユーザーがクライアント側の検証をバイパスするリスクを軽減します。
+- 有効なデータとみなされるものについての信頼できる情報源を 1 つ用意します。
+
+`create-form.tsx`コンポーネントで、`react-dom`から`useFormState`フックをインポートします。`useFormState`はフックであるため、`"use client"`ディレクティブを使用してフォームをクライアント コンポーネントに変換する必要があります。
+
+フォームコンポーネント内の`useFormState`フックは次のとおりです。
+
+- 2 つの引数を取ります: (action, initialState)。
+- 2 つの値を返します: [state, dispatch]- フォームの状態、およびディスパッチ関数 ( useReducerと同様)）
+
+`createInvoice`アクションを`useFormState`の引数として渡し、`<form action={}>`属性内で`dispatch`を呼び出します。
+
+```JavaScript: /app/ui/invoices/create-form.tsx
+// ...
+import { useFormState } from 'react-dom';
+
+export default function Form({ customers }: { customers: CustomerField[] }) {
+  const [state, dispatch] = useFormState(createInvoice, initialState);
+
+  return <form action={dispatch}>...</form>;
+}
+```
+
+`initialState`は任意に定義できます。この場合は、`message`と`errors`の 2 つの空のキーを持つオブジェクトを作成します。
+
+```JavaScript: /app/ui/invoices/create-form.tsx
+// ...
+import { useFormState } from 'react-dom';
+
+export default function Form({ customers }: { customers: CustomerField[] }) {
+  const initialState = { message: null, errors: {} };
+  const [state, dispatch] = useFormState(createInvoice, initialState);
+
+  return <form action={dispatch}>...</form>;
+}
+```
+
+サーバー アクションを更新すると、よりわかりやすくなります。
+`action.ts`ファイル内で`Zod`を使用してフォームデータを検証できます。`FormSchema`を次のように更新します。
+
+```JavaScript: /app/lib/action.ts
+const FormSchema = z.object({
+  id: z.string(),
+  customerId: z.string({
+    invalid_type_error: 'Please select a customer.',
+  }),
+  amount: z.coerce
+    .number()
+    .gt(0, { message: 'Please enter an amount greater than $0.' }),
+  status: z.enum(['pending', 'paid'], {
+    invalid_type_error: 'Please select an invoice status.',
+  }),
+  date: z.string(),
+});
+```
+
+- `customerId` - Zod は`string`タイプを予期しているため、顧客フィールドが空の場合はすでにエラーをスローします。ただし、ユーザーが顧客を選択しない場合は、フレンドリーなメッセージを追加しましょう。
+- `amount`- 金額タイプを`string`から`number`に強制しているため、文字列が空の場合はデフォルトでゼロになります。`.gt()`関数を使用して、常に 0 より大きい量が必要であることを Zod に伝えましょう。
+- `status` - Zod はステータス フィールドが空の場合、「pending」または「paid」を期待しているため、すでにエラーをスローします。ユーザーがステータスを選択しない場合には、フレンドリーなメッセージも追加しましょう。
+
+次に、`createInvoice`が2つのパラメーターを受け入れるようにアクションを更新します。
+
+```JavaScript: /app/lib/actions.ts
+// This is temporary until @types/react-dom is updated
+export type State = {
+  errors?: {
+    customerId?: string[];
+    amount?: string[];
+    status?: string[];
+  };
+  message?: string | null;
+};
+
+export async function createInvoice(prevState: State, formData: FormData) {
+  // ...
+}
+```
+
+- `formData` - 以前と同じ。
+- `prevState` - フックから渡された状態が含まれます`useFormState`。この例のアクションでは使用しませんが、必須の `prop` です。
+
+次に、Zod`parse()`関数を`safeParse()`に変更します。
+
+```JavaScript: /app/lib/actions.ts
+export async function createInvoice(prevState: State, formData: FormData) {
+  // Validate form fields using Zod
+  const validatedFields = CreateInvoice.safeParse({
+    customerId: formData.get('customerId'),
+    amount: formData.get('amount'),
+    status: formData.get('status'),
+  });
+
+  // ...
+}
+```
+
+`safeParse()`は `success`または`error`フィールドのいずれかを含むオブジェクトを返します。これにより、このロジックを`try/catch`ブロック内に配置しなくても、検証をより適切に処理できるようになります。
+
+情報をデータベースに送信する前に、フォームフィールドが条件付きで正しく検証されたかどうかを確認してください。
+
+```JavaScript: /app/lib/actions.ts
+export async function createInvoice(prevState: State, formData: FormData) {
+  // Validate form fields using Zod
+  const validatedFields = CreateInvoice.safeParse({
+    customerId: formData.get('customerId'),
+    amount: formData.get('amount'),
+    status: formData.get('status'),
+  });
+
+  // If form validation fails, return errors early. Otherwise, continue.
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Missing Fields. Failed to Create Invoice.',
+    };
+  }
+
+  // ...
+}
+```
+
+`validatedFields`成功しない場合は、`Zod`からのエラーメッセージとともに関数を早期に返します。
+
+ヒント: console.logで`validatedFields`を参照し、空のフォームを送信してその形状を確認します。
+
+最後に、`try/catch` ブロックの外側でフォームの検証を個別に処理しているため、データベース エラーに対して特定のメッセージを返すことができ、最終的なコードは次のようになります。
+
+```JavaScript: /app/lib/actions.ts
+export async function createInvoice(prevState: State, formData: FormData) {
+  // Validate form using Zod
+  const validatedFields = CreateInvoice.safeParse({
+    customerId: formData.get('customerId'),
+    amount: formData.get('amount'),
+    status: formData.get('status'),
+  });
+
+  // If form validation fails, return errors early. Otherwise, continue.
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Missing Fields. Failed to Create Invoice.',
+    };
+  }
+
+  // Prepare data for insertion into the database
+  const { customerId, amount, status } = validatedFields.data;
+  const amountInCents = amount * 100;
+  const date = new Date().toISOString().split('T')[0];
+
+  // Insert data into the database
+  try {
+    await sql`
+      INSERT INTO invoices (customer_id, amount, status, date)
+      VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
+    `;
+  } catch (error) {
+    // If a database error occurs, return a more specific error.
+    return {
+      message: 'Database Error: Failed to Create Invoice.',
+    };
+  }
+
+  // Revalidate the cache for the invoices page and redirect the user.
+  revalidatePath('/dashboard/invoices');
+  redirect('/dashboard/invoices');
+}
+```
+
+フォームコンポーネントにエラーを表示しましょう。`create-form.tsx`コンポーネントに戻ると、フォーム`state`を使用してエラーにアクセスできます。
+
+**特定のエラーをそれぞれチェックする三項演算子**を追加します。たとえば、顧客のフィールドの後に次を追加できます。
+
+```JavaScript: /app/ui/invoices/create-form.tsx
+<form action={dispatch}>
+  <div className="rounded-md bg-gray-50 p-4 md:p-6">
+    {/* Customer Name */}
+    <div className="mb-4">
+      <label htmlFor="customer" className="mb-2 block text-sm font-medium">
+        Choose customer
+      </label>
+      <div className="relative">
+        <select
+          id="customer"
+          name="customerId"
+          className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
+          defaultValue=""
+          // add
+          aria-describedby="customer-error"
+        >
+          <option value="" disabled>
+            Select a customer
+          </option>
+          {customerNames.map((name) => (
+            <option key={name.id} value={name.id}>
+              {name.name}
+            </option>
+          ))}
+        </select>
+        <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
+      </div>
+      // add
+      <div id="customer-error" aria-live="polite" aria-atomic="true">
+        {state.errors?.customerId &&
+          state.errors.customerId.map((error: string) => (
+            <p className="mt-2 text-sm text-red-500" key={error}>
+              {error}
+            </p>
+          ))}
+      </div>
+    </div>
+    // ...
+  </div>
+</form>
+```
+
+**ヒント** :コンポーネント内でconsole.logで`state` を確認し、すべてが正しく接続されているかどうかを確認できます。フォームがクライアント コンポーネントになっているので、開発ツールのコンソールを確認してください。
+
+上記のコードでは、次の aria ラベルも追加しています。
+
+- `aria-describedby="customer-error"` : これにより、`select`要素とエラー メッセージ コンテナーの間の関係が確立されます。これは、`id="customer-error"`のコンテナが`select`要素を説明していることを示します。ユーザー`select`がボックスを操作してエラーを通知すると、スクリーン リーダーがこの説明を読み上げます。
+- `id="customer-error"`: この`id`属性は、入力のエラーメッセージを保持する HTML `select`要素を一意に識別します。この関係を確立するためには`aria-describedby`が必要です。
+- `aria-live="polite"`: スクリーン リーダーは、`div`要素の内部のエラーが更新されたときにユーザーに丁寧に通知する必要があります。コンテンツが変更されると (たとえば、ユーザーがエラーを修正するときなど)、スクリーンリーダーは変更を通知しますが、それはユーザーがアイドル状態の場合に限り、変更を中断しないようにします。
+
+## ariaラベルを追加する
+
+amount, status, state.messageについてもエラーの表示を行う。
