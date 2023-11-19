@@ -1105,3 +1105,7 @@ export async function createInvoice(prevState: State, formData: FormData) {
 - `aria-describedby="customer-error"` : これにより、`select`要素とエラー メッセージ コンテナーの間の関係が確立されます。これは、`id="customer-error"`のコンテナが`select`要素を説明していることを示します。ユーザー`select`がボックスを操作してエラーを通知すると、スクリーン リーダーがこの説明を読み上げます。
 - `id="customer-error"`: この`id`属性は、入力のエラーメッセージを保持する HTML `select`要素を一意に識別します。この関係を確立するためには`aria-describedby`が必要です。
 - `aria-live="polite"`: スクリーン リーダーは、`div`要素の内部のエラーが更新されたときにユーザーに丁寧に通知する必要があります。コンテンツが変更されると (たとえば、ユーザーがエラーを修正するときなど)、スクリーンリーダーは変更を通知しますが、それはユーザーがアイドル状態の場合に限り、変更を中断しないようにします。
+
+## ariaラベルを追加する
+
+amount, status, state.messageについてもエラーの表示を行う。
