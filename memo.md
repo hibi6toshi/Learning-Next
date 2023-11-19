@@ -770,3 +770,13 @@ export async function deleteInvoice(id: string) {
 ```
 
 このアクションは`/dashboard/invoices`パス内で呼び出されているため、 `redirect`を呼び出す必要はありません。`revalidatePath`を呼び出すと、新しいサーバー要求がトリガーされ、テーブルが再レンダリングされます。
+
+# Chapter13
+
+エラーハンドリング
+
+## サーバーアクションへの`try/catch`の追加
+
+まず、JavaScript のtry/catchステートメントをサーバーアクションに追加して、エラーを適切に処理できるようにしましょう。
+
+`redirect`が`try/catch`ブロックの外でどのように呼び出されているかに注意してください。`try`が成功した場合にのみ`redirect`は到達可能になります。
