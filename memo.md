@@ -539,3 +539,234 @@ const handleSearch = useDebouncedCallback((term) => {
 次に、`totalPagesprop` を`<Pagination/>`コンポーネントに渡します。
 
 `<Pagination/>`コンポーネントに移動し、`usePathname`フックと`useSearchParams`フックをインポートします。これを使用して現在のページを取得し、新しいページを設定します。
+
+# Chapter12
+
+## サーバーアクションとは何ですか?
+
+React Server Actions を使用すると、サーバー上で非同期コードを直接実行できます。データを変更するために APIエンドポイントを作成する必要がなくなります。代わりに、サーバー上で実行され、クライアント コンポーネントまたはサーバー コンポーネントから呼び出すことができる非同期関数を作成します。
+
+Web アプリケーションはさまざまな脅威に対して脆弱になる可能性があるため、セキュリティは最優先事項です。ここでサーバー アクションが登場します。サーバー アクションは、さまざまな種類の攻撃から保護し、データを保護し、承認されたアクセスを保証する、効果的なセキュリティ ソリューションを提供します。サーバー アクションは、POST リクエスト、暗号化されたクロージャ、厳格な入力チェック、エラー メッセージのハッシュ化、ホスト制限などの技術を通じてこれを実現し、すべて連携してアプリの安全性を大幅に強化します。
+
+## サーバーアクションでのフォームの使用
+
+React では、`<form>`要素内の`action`属性を使用してアクションを呼び出すことができます。アクションはキャプチャされたデータを含むネイティブ`FormData`を自動的に受け取ります。
+
+```JavaScript:
+// Server Component
+export default function Page() {
+  // Action
+  async function create(formData: FormData) {
+    'use server';
+
+    // Logic to mutate data...
+  }
+
+  // Invoke the action using the "action" attribute
+  return <form action={create}>...</form>;
+}
+```
+
+サーバー コンポーネント内でサーバー アクションを呼び出すことの利点は、段階的な機能拡張です。クライアントで JavaScript が無効になっている場合でもフォームは機能します。
+
+## 請求書の作成
+
+新しい請求書を作成する手順は次のとおりです。
+
+1. ユーザーの入力を取得するフォームを作成します。
+2. サーバー アクションを作成し、フォームから呼び出します。
+3. サーバー アクション内で、オブジェクトからデータを抽出しますformData。
+4. データベースに挿入するデータを検証して準備します。
+5. データを挿入し、エラーがあれば処理します。
+6. キャッシュを再検証し、ユーザーを請求書ページにリダイレクトします。
+
+### 2.サーバーアクションの作成
+
+フォームの送信時に呼び出されるサーバー アクションを作成しましょう。
+
+`lib`ディレクトリに移動し、 `actions.ts`という名前の新しいファイルを作成します。このファイルの先頭に、React `use server`を追加します。
+
+`'use server'`を追加すると、ファイル内のエクスポートされたすべての関数がサーバー関数としてマークされます。これらのサーバー機能はクライアント コンポーネントとサーバー コンポーネントにインポートできるため、非常に多用途なものになります。
+
+アクション内に「use server」を追加することで、サーバー コンポーネント内にサーバー アクションを直接記述することもできます。ただし、このコースでは、それらをすべて別のファイルに整理します。
+
+```JavaScript:
+import { createInvoice } from '@/app/lib/actions';
+
+export default function Form({
+  customers,
+}: {
+  customers: customerField[];
+}) {
+  return (
+    // createInvoice関数は、formDataを受け取れるのでこのまま渡せる。
+    <form action={createInvoice}>
+      // ...
+  )
+}
+```
+
+サーバー アクションは舞台裏で`POST`API エンドポイントを作成します。これが、サーバー アクションを使用するときに API エンドポイントを手動で作成する必要がない理由です。
+
+### 3. `formData`からデータを抽出
+
+`actions.ts`ファイルに戻り、 `formData`の値を抽出する必要があります。いくつかの方法があります。この例では`.get(name)`方法を使います。。
+[FormData API](https://developer.mozilla.org/en-US/docs/Web/API/FormData/append)
+
+ヒント:多くのフィールドがあるフォームを使用している場合は、JavaScriptの`Object.fromEntries()`の`entries()` を使えます。例えば：
+const rawFormData = Object.fromEntries(formData.entries())
+
+### 4.データを検証して準備する
+
+**型の検証と強制**
+フォームからのデータがデータベース内の予期される型と一致していることを検証することが重要です。たとえば、console.logアクション内に を追加すると、次のようになります。
+
+```
+console.log(typeof rawFormData.amount);
+```
+
+この結果から、`amount`の型が`String`であって、`Number`ではないことがわかります。これは、`input`要素が例え、`type="number"`であってもstringを返すためです。
+
+型の検証を処理するには、いくつかのオプションがあります。型を手動で検証することもできますが、型検証ライブラリを使用すると時間と労力を節約できます。例として、`Zod` を使用します。、このタスクを簡素化できる TypeScript ファーストの検証ライブラリです。
+
+`actions.ts`ファイルで`Zod` をインポートし、フォームオブジェクトの形状に一致するスキーマを定義します。このスキーマは、データベースに保存する前に`formData`を検証します。
+
+この`amount`フィールドは、文字列から数値に強制 (変更) すると同時に、その型を検証するように具体的に設定されています。
+
+次に、`rawFormData`を渡して`CreateInvoice`型を検証できます。
+
+**値をセント単位で保存する**
+通常、JavaScript 浮動小数点エラーを排除し、精度を高めるために、データベースに通貨値をセント単位で保存することをお勧めします。
+
+金額をセントに変換しましょう。
+
+最後に、請求書の作成日として「YYYY-MM-DD」の形式で新しい日付を作成しましょう。
+
+### 5.データベースへのデータの挿入
+
+SQLクエリを作成して新しい請求書をデータベースに挿入し、変数を渡すことができます。
+現時点ではエラーは処理されていません。次の章でそれを行います。とりあえずは次のステップに進みましょう。
+
+### 6.再検証とリダイレクト
+
+Next.js には、ユーザーのブラウザーにルートセグメントを一時的に保存するクライアント側ルーターキャッシュがあります。このキャッシュは、プリフェッチと併せて、サーバーに対するリクエストの数を減らしながら、ユーザーがルート間を迅速に移動できるようにします。
+
+請求書ルートに表示されるデータを更新しているため、このキャッシュをクリアして、サーバーへの新しいリクエストをトリガーしたいと考えています。Next.js の`revalidatePath`関数を使用してこれを行うことができます。
+
+データベースが更新されると、`/dashboard/invoices`パスが再検証され、新しいデータがサーバーからフェッチされます。
+
+この時点で、ユーザーを`/dashboard/invoices`ページにリダイレクトすることもできます。Next.js の`redirect`関数を使用してこれを行うことができます。
+
+## 請求書の更新
+
+請求書更新フォームは請求書作成フォームと似ていますが、データベース内のレコードを更新するために請求書`id`を渡す必要がある点が異なります。請求書`id`を取得して渡す方法を見てみましょう。
+
+請求書を更新するには次の手順を実行します。
+
+1. 請求書`id`を使用して新しい動的ルート セグメントを作成します。
+2. ページパラメータから請求書`id`を読み取ります。
+3. データベースから特定の請求書を取得します。
+4. フォームに請求書のデータを事前に入力します。
+5. データベース内の請求書データを更新します。
+
+### 1. 請求書`id`を使用して新しい動的ルート セグメントを作成します。
+
+Next.jsを使用すると、正確なセグメント名が分からず、データに基づいてルートを作成したい場合に、動的ルート セグメントを作成できます。これは、ブログ投稿のタイトル、製品ページなどです。フォルダー名を角括弧で囲むことによって、動的ルート セグメントを作成できます。たとえば、 [id]、 [post]、[slug]。
+
+`/invoices`フォルダー内に`[id]`という新しい動的ルートを作成し、次に`page.tsx`ファイルを含む新しいルート`edit`を作成します。ファイル構造は次のようになります。
+![](edit-invoice-route.avif)
+
+### 2. ページパラメータから請求書`id`を読み取ります。
+
+別のフォームを (ファイルから) インポートする点を除いて、`/create`請求書ページと`edit-form.tsx`がどのように似ているかに注目してください。このフォームには、顧客の名前、請求金額、およびステータスを事前に入力する必要があります。`defaultValue`フォームフィールドに事前に入力するには、 `id`を使用して特定の請求書を取得する必要があります。
+
+`searchParams`に加えて、ページ コンポーネントは、 `params`という`props`にアクセスするできます。そして`params`を使って、`id`にアクセスできます。プロパティを受け取るように`<Page>`コンポーネントを更新します。
+
+### 3. データベースから特定の請求書を取得します。
+
+- `fetchInvoiceById`という新しい関数をインポートし、`id`を引数として渡します。
+- `fetchCustomers`関数をインポートしてドロップダウンの顧客名を取得します。
+
+**UUID と自動インクリメントキー**
+
+インクリメントキー (1、2、3 など) の代わりに UUID を使用します。これにより URL が長くなります。ただし、UUID は ID 衝突のリスクを排除し、グローバルに一意であり、列挙型攻撃のリスクを軽減するため、大規模なデータベースに最適です。
+ただし、よりクリーンな URL を好む場合は、自動インクリメントキーを使用することをお勧めします。
+
+### 4. idをサーバーアクションに渡す
+
+最後に、データベース内の適切なレコードを更新できるように、を`id`サーバーアクションに渡します。次のように `id`を引数として渡すことはできません。
+
+```JavaScript: /app/ui/invoices/edit-form.tsx
+// Passing an id as argument won't work
+<form action={updateInvoice(id)}>
+```
+
+代わりに、JS の`bind`を使用して`id`をサーバー アクションに渡すことができます。これにより、サーバーアクションに渡されるすべての値が確実にエンコードされます。
+
+```JavaScript: /app/ui/invoices/edit-form.tsx
+// ...
+import { updateInvoice } from '@/app/lib/actions';
+
+export default function EditInvoiceForm({
+  invoice,
+  customers,
+}: {
+  invoice: InvoiceForm;
+  customers: CustomerField[];
+}) {
+  const updateInvoiceWithId = updateInvoice.bind(null, invoice.id);
+
+  return (
+    <form action={updateInvoiceWithId}>
+      <input type="hidden" name="id" value={invoice.id} />
+    </form>
+  );
+}
+```
+
+注:フォーム内で非表示の入力フィールドを使用することもできます (例<input type="hidden" name="id" value={invoice.id} />)。ただし、値は HTML ソースにフルテキストとして表示されるため、ID などの機密データには理想的ではありません。
+
+`actions.ts`ファイル内に新しいアクションを作成します`updateInvoice`。
+
+`createInvoice`アクションと同様に、次のようになります。
+
+1. `formData`からデータを抽出しています。
+2. Zod を使用して型を検証します。
+3. 金額をセントに変換します。
+4. 変数を SQL クエリに渡します。
+5. `revalidatePath`でクライアントキャッシュをクリアし、新しいサーバーリクエストを行うために呼び出します。
+6. `redirect`をユーザーを請求書のページにリダイレクトするために呼び出します。
+
+## 請求書の削除
+
+サーバー アクションを使用して請求書を削除するには、`<form>`要素で削除ボタンをラップし、`bind`を使用して`id`をサーバー アクションに渡します。
+
+```JavaScript: /app/ui/invoices/buttons.tsx
+import { deleteInvoice } from '@/app/lib/actions';
+
+// ...
+
+export function DeleteInvoice({ id }: { id: string }) {
+  const deleteInvoiceWithId = deleteInvoice.bind(null, id);
+
+  return (
+    <form action={deleteInvoiceWithId}>
+      <button className="rounded-md border p-2 hover:bg-gray-100">
+        <span className="sr-only">Delete</span>
+        <TrashIcon className="w-4" />
+      </button>
+    </form>
+  );
+}
+```
+
+`actions.tsx`に`deleteInvoice`を定義します。
+
+```JavaScript
+export async function deleteInvoice(id: string) {
+  await sql`DELETE FROM invoices WHERE id = ${id}`;
+  revalidatePath('/dashboard/invoices');
+}
+```
+
+このアクションは`/dashboard/invoices`パス内で呼び出されているため、 `redirect`を呼び出す必要はありません。`revalidatePath`を呼び出すと、新しいサーバー要求がトリガーされ、テーブルが再レンダリングされます。
