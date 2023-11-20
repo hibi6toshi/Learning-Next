@@ -1247,3 +1247,97 @@ export const { auth, signIn, signOut } = NextAuth({
 **知っておくとよいこと:**
 
 認証情報プロバイダーを使用していますが、一般的にはOAuthやeメールなどの代替プロバイダーを使用することをお勧めします。NextAuth.js のドキュメントを参照してください。オプションの完全なリストについては、こちらをご覧ください。
+
+## サインイン機能の追加
+
+`authorize`関数を使用して認証ロジックを処理できます。サーバー アクションと同様に、ユーザーがデータベースに存在するかどうかを確認する前に、電子メールとパスワードを検証するために`zod`使用できます。
+
+```JavaScript: /auth.ts
+import { z } from 'zod';
+
+export const { auth, signIn, signOut } = NextAuth({
+  ...authConfig,
+  providers: [
+    // 以下を変更
+    Credentials({
+      async authorize(credentials) {
+        const parsedCredentials = z
+          .object({ email: z.string().email(), password: z.string().min(6) })
+          .safeParse(credentials);
+      },
+    }),
+  ],
+});
+```
+
+資格情報を検証した後、データベースからユーザーにクエリを実行する新しい関数`getUser`を作成します。
+
+```JavaScript: /auth.ts
+import type { User } from '@/app/lib/definitions';
+import bcrypt from 'bcrypt';
+
+async function getUser(email: string): Promise<User | undefined> {
+  try {
+    const user = await sql<User>`SELECT * FROM users WHERE email=${email}`;
+    return user.rows[0];
+  } catch (error) {
+    console.error('Failed to fetch user:', error);
+    throw new Error('Failed to fetch user.');
+  }
+}
+
+export const { auth, signIn, signOut } = NextAuth({
+  ...authConfig,
+  providers: [
+    Credentials({
+      async authorize(credentials) {
+        const parsedCredentials = z
+          .object({ email: z.string().email(), password: z.string().min(6) })
+          .safeParse(credentials);
+
+        if (parsedCredentials.success) {
+          const { email, password } = parsedCredentials.data;
+          const user = await getUser(email);
+          if (!user) return null;
+        }
+
+        return null;
+      },
+    }),
+  ],
+});
+```
+
+次に、`bcrypt.compare`を呼び出してパスワードが一致するかどうかを確認します。
+
+```JavaScript: auth.ts
+import bcrypt from 'bcrypt';
+
+// ...
+
+export const { auth, signIn, signOut } = NextAuth({
+  ...authConfig,
+  providers: [
+    Credentials({
+      async authorize(credentials) {
+        // ...
+
+        if (parsedCredentials.success) {
+          const { email, password } = parsedCredentials.data;
+          const user = await getUser(email);
+          if (!user) return null;
+          // 以下を追加
+          const passwordsMatch = await bcrypt.compare(password, user.password);
+
+          if (passwordsMatch) return user;
+        }
+
+        console.log('Invalid credentials');
+        return null;
+      },
+    }),
+  ],
+});
+```
+
+最後に、パスワードが一致する場合はユーザーを返し、そうでない場合はnullユーザーがログインできないように返します。
