@@ -1153,3 +1153,32 @@ export default function LoginPage() {
 ```
 
 `LoginForm`については後で説明します。
+
+## NextAuth.js
+
+NextAuth.js を使用しますアプリケーションに認証を追加します。NextAuth.js は、セッション、サインインとサインアウト、および認証のその他の側面の管理に伴う複雑さの多くを抽象化します。これらの機能を手動で実装することもできますが、そのプロセスには時間がかかり、エラーが発生しやすくなります。NextAuth.js はプロセスを簡素化し、Next.js アプリケーションでの認証のための統合ソリューションを提供します。
+
+## NextAuth.js のセットアップ
+
+ターミナルで以下を実行.
+
+```bash:
+npm install next-auth@beta
+```
+
+ここでは、Next.js 14 と互換性のある`beta`バージョンの NextAuth.js をインストールします。
+
+次に、アプリケーションの秘密キーを生成します。このキーは Cookie の暗号化に使用され、ユーザー セッションのセキュリティが確保されます。これを行うには、ターミナルで次のコマンドを実行します。
+
+```bash:
+openssl rand -base64 32
+```
+
+次に、.envファイル内で、生成されたキーを`AUTH_SECRET`変数に追加します。
+
+```.env
+AUTH_SECRET=your-secret-key
+```
+
+実稼働環境で認証を機能させるには、Vercel プロジェクトの環境変数も更新する必要があります。このガイドを確認してくださいVercel に環境変数を追加する方法について説明します。
+[環境変数を追加](https://vercel.com/docs/projects/environment-variables)
