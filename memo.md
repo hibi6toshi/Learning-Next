@@ -1198,3 +1198,29 @@ export const authConfig = {
 ```
 
 `pages`オプションを使用して、カスタム サインイン、サインアウト、およびエラーページのルートを指定できます。これは必須ではありませんが、オプション`signIn: '/login'`を`pages`に追加すると、ユーザーは NextAuth.js のデフォルト ページではなく、カスタム ログイン ページにリダイレクトされます。
+
+## Next.jsミドルウェアでルートを保護する
+
+次に、ルートを保護するロジックを追加します。これにより、ユーザーはログインしない限りダッシュボード ページにアクセスできなくなります。
+
+`authorized`コールバックは、リクエストがNext.js Middleware経由でページにアクセスすることを許可されているかどうかを確認するために使用されます。これはリクエストが完了する前に呼び出され、`auth`および`request`プロパティを持つオブジェクトを受け取ります。`auth`プロパティにはユーザーのセッションが含まれ、`request`プロパティには受信リクエストが含まれます。
+
+`providers`オプションは、さまざまなログイン オプションをリストする配列です。現時点では、NextAuth 構成を満たすための空の配列です。詳細については、「資格情報プロバイダーの追加」セクションで説明します。
+
+次に、`authConfig`オブジェクトをミドルウェア ファイルにインポートする必要があります。プロジェクトのルートに `middleware.ts`というファイルを作成し、次のコードを貼り付けます。
+
+```JavaScript: /middleware.ts
+import NextAuth from 'next-auth';
+import { authConfig } from './auth.config';
+
+export default NextAuth(authConfig).auth;
+
+export const config = {
+  // https://nextjs.org/docs/app/building-your-application/routing/middleware#matcher
+  matcher: ['/((?!api|_next/static|_next/image|.*\\.png$).*)'],
+};
+```
+
+こでは、`authConfig`オブジェクトを使用して NextAuth.js を初期化し、`auth`プロパティをエクスポートしています。また、ミドルウェアの`matcher`オプションを使用して、特定のパスで実行するように指定しています。
+
+このタスクにミドルウェアを採用する利点は、ミドルウェアが認証を検証するまで保護されたルートのレンダリングが開始されず、アプリケーションのセキュリティとパフォーマンスの両方が向上することです。
