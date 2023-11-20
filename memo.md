@@ -1182,3 +1182,19 @@ AUTH_SECRET=your-secret-key
 
 実稼働環境で認証を機能させるには、Vercel プロジェクトの環境変数も更新する必要があります。このガイドを確認してくださいVercel に環境変数を追加する方法について説明します。
 [環境変数を追加](https://vercel.com/docs/projects/environment-variables)
+
+## ページオプションの追加
+
+`authConfig`オブジェクトをエクスポートする`auth.config.ts`ファイルをプロジェクトのルートに作成します。このオブジェクトには、NextAuth.js の構成オプションが含まれます。現時点では、`pages`オプションのみが含まれます。
+
+```JavaScript: /auth.config.ts
+import type { NextAuthConfig } from 'next-auth';
+
+export const authConfig = {
+  pages: {
+    signIn: '/login',
+  },
+};
+```
+
+`pages`オプションを使用して、カスタム サインイン、サインアウト、およびエラーページのルートを指定できます。これは必須ではありませんが、オプション`signIn: '/login'`を`pages`に追加すると、ユーザーは NextAuth.js のデフォルト ページではなく、カスタム ログイン ページにリダイレクトされます。
