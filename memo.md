@@ -1341,3 +1341,78 @@ export const { auth, signIn, signOut } = NextAuth({
 ```
 
 最後に、パスワードが一致する場合はユーザーを返し、そうでない場合はnullユーザーがログインできないように返します。
+
+## ログインフォームの更新
+
+次に、認証ロジックをログイン フォームに接続する必要があります。`actions.ts`ファイル内に、 `authenticate`という新しいアクションを作成します。このアクションでは、`auth.ts`から`signIn`関数をインポートする必要があります。
+
+```JavaScript: /app/lib/actions.ts
+import { signIn } from '@/auth';
+
+// ...
+
+export async function authenticate(
+  prevState: string | undefined,
+  formData: FormData,
+) {
+  try {
+    await signIn('credentials', Object.fromEntries(formData));
+  } catch (error) {
+    if ((error as Error).message.includes('CredentialsSignin')) {
+      return 'CredentialsSignin';
+    }
+    throw error;
+  }
+}
+```
+
+`'CredentialsSignin'`エラーがある場合は、適切なエラー メッセージを表示できるように、エラーを返す必要があります。
+
+最後に、`login-form.tsx`コンポーネント内で、Reactの`useFormState` を使用してサーバー アクションを呼び出し、フォーム エラーを処理し、フォームの保留状態を処理するために`useFormStatus`を使用できます。
+
+```JavaScript: /app/ui/login-form.tsx
+'use client';
+
+import { useFormState, useFormStatus } from 'react-dom';
+import { authenticate } from '@/app/lib/actions';
+
+export default function LoginForm() {
+  const [state, dispatch] = useFormState(authenticate, undefined);
+
+  return (
+    <form action={dispatch} className="space-y-3">
+      <div className="flex-1 rounded-lg bg-gray-50 px-6 pb-4 pt-8">
+        <h1 className={`${lusitana.className} mb-3 text-2xl`}>
+          Please log in to continue.
+        </h1>
+        <div className="w-full">
+          // ...
+        </div>
+        <LoginButton />
+        <div
+          className="flex h-8 items-end space-x-1"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {state === 'CredentialsSignin' && (
+            <>
+              <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
+              <p className="text-sm text-red-500">Invalid credentials</p>
+            </>
+          )}
+        </div>
+      </div>
+    </form>
+  );
+}
+
+function LoginButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button className="mt-4 w-full" aria-disabled={pending}>
+      Log in <ArrowRightIcon className="ml-auto h-5 w-5 text-gray-50" />
+    </Button>
+  );
+}
+```
