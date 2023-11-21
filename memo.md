@@ -1560,3 +1560,34 @@ export const metadata: Metadata = {
   title: 'Invoices | Acme Dashboard',
 };
 ```
+
+これは機能しますが、すべてのページでアプリケーションのタイトルを繰り返しています。会社名など、何かが変更された場合は、すべてのページで更新する必要があります。
+
+代わりに、`metadata`オブジェクト内の`title.template`フィールドを使用して、ページ タイトルのテンプレートを定義できます。このテンプレートには、ページ タイトルやその他の必要な情報を含めることができます。
+
+ルート レイアウトで、`metadata`オブジェクトを更新してテンプレートを含めます。
+
+```JavaScript: /app/layout.tsx
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: {
+    template: '%s | Acme Dashboard',
+    default: 'Acme Dashboard',
+  },
+  description: 'The official Next.js Learn Dashboard built with App Router.',
+  metadataBase: new URL('https://next-learn-dashboard.vercel.sh'),
+};
+```
+
+テンプレート内の`%s`は、特定のページ タイトルに置き換えられます。
+
+これで、`/dashboard/invoices`ページにページ タイトルを追加できます。
+
+```JavaScript: /app/dashboard/invoices/page.tsx
+export const metadata: Metadata = {
+  title: 'Invoices',
+};
+```
+
+`/dashboard/invoices`ページに移動して`<head>`要素を確認します。ページのタイトルが`Invoices | Acme Dashboard` になっていることがわかります。
