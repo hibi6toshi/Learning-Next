@@ -1472,23 +1472,47 @@ Web 開発では、メタデータは Web ページに関する追加の詳細�
 ```
 
 **説明メタデータ**: このメタデータは、Web ページのコンテンツの簡単な概要を提供し、多くの場合、検索エンジンの結果に表示されます。
+
 ```HTML:
 <meta name="description" content="A brief description of the page content." />
 ```
 
 **キーワード メタデータ**: このメタデータには、Web ページのコンテンツに関連するキーワードが含まれており、検索エンジンがページをインデックスするのに役立ちます。
+
 ```HTML:
 <meta name="keywords" content="keyword1, keyword2, keyword3" />
 ```
 
 **Open Graph メタデータ**: このメタデータは、ソーシャル メディア プラットフォームで共有される際の Web ページの表現方法を強化し、タイトル、説明、プレビュー画像などの情報を提供します。
-```HTML: 
+
+```HTML:
 <meta property="og:title" content="Title Here" />
 <meta property="og:description" content="Description Here" />
 <meta property="og:image" content="image_url_here" />
 ```
 
 **ファビコン メタデータ**: このメタデータは、ブラウザのアドレス バーまたはタブに表示されるファビコン (小さなアイコン) を Web ページにリンクします。
-```HTML: 
+
+```HTML:
 <link rel="icon" href="path/to/favicon.ico" />
 ```
+
+## メタデータの追加
+
+Next.js には、アプリケーションのメタデータを定義するために使用できるメタデータ API があります。アプリケーションにメタデータを追加するには、次の 2 つの方法があります。
+
+- 構成ベース: 静的`metadata`オブジェクトまたは動的`generateMetadata`関数を`layout.js`または`page.js`ファイルにエクスポートします。
+
+  - [静的metadata](https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadata-object)
+  - [動的generateMetadata](https://nextjs.org/docs/app/api-reference/functions/generate-metadata#generatemetadata-function)
+
+- ファイルベース: Next.js には、特にメタデータの目的で使用されるさまざまな特殊ファイルがあります。
+
+  - `favicon.ico`、`apple-icon.jpg`、`icon.jpg`: ファビコンとアイコンに使用されます
+  - `opengraph-image.jpg`および`twitter-image.jpg`: ソーシャルメディア画像に採用
+  - `robots.txt`: 検索エンジンのクロールの手順を説明します。
+  - `sitemap.xml`: ウェブサイトの構造に関する情報を提供します
+
+これらのファイルを静的メタデータとして柔軟に使用することも、プロジェクト内でプログラムによって生成することもできます。
+
+これらの両方のオプションを使用すると、Next.js はページに関連する`<head>`要素を自動的に生成します。
