@@ -1526,3 +1526,37 @@ Next.js には、アプリケーションのメタデータを定義するため
 これを実行すると、Next.js はこれらのファイルを自動的に識別し、favicon および OG 画像として使用します。これは、開発ツールでアプリケーションの`<head>`要素をチェックすることで確認できます。
 
 **知っておくべきこと**: `ImageResponse`コンストラクターを使用して動的な OG イメージを作成することもできます。
+
+## ページのタイトルと説明
+
+`layout.js`または`page.js`ファイルから`metadata`オブジェクトを含めて、タイトルや説明などの追加のページ情報を追加することもできます。`layout.js`のメタデータは、それを使用するすべてのページに継承されます。
+
+ルート レイアウトで、次のフィールドを持つ新しい`metadata`オブジェクトを作成します。
+
+```JavaScript: /app/layout.tsx
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Acme Dashboard',
+  description: 'The official Next.js Course Dashboard, built with App Router.',
+  metadataBase: new URL('https://next-learn-dashboard.vercel.sh'),
+};
+
+export default function RootLayout() {
+  // ...
+}
+```
+
+Next.js は、タイトルとメタデータをアプリケーションに自動的に追加します。
+
+しかし、特定のページにカスタム タイトルを追加したい場合はどうすればよいでしょうか? metadataこれを行うには、ページ自体にオブジェクトを追加します。ネストされたページのメタデータは、親のメタデータをオーバーライドします。
+
+たとえば、`/dashboard/invoices`ページ内でページ タイトルを更新できます。
+
+```JavaScript: /app/dashboard/invoices/page.tex
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Invoices | Acme Dashboard',
+};
+```
