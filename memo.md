@@ -1109,3 +1109,342 @@ export async function createInvoice(prevState: State, formData: FormData) {
 ## ariaラベルを追加する
 
 amount, status, state.messageについてもエラーの表示を行う。
+
+# Chapter15
+
+認証の追加
+
+## 認証とは何ですか?
+
+認証は、今日の多くの Web アプリケーションの重要な部分です。これは、ユーザーが本人であるかどうかをシステムがチェックする方法です。
+
+安全な Web サイトでは、多くの場合、ユーザーの身元を確認するために複数の方法が使用されます。たとえば、ユーザー名とパスワードを入力すると、サイトからデバイスに確認コードが送信されたり、Google Authenticator などの外部アプリが使用されたりすることがあります。この 2 要素認証 (2FA) はセキュリティの向上に役立ちます。たとえ誰かがあなたのパスワードを知ったとしても、あなたの固有のトークンがなければあなたのアカウントにアクセスすることはできません。
+
+## 認証と認可
+
+Web 開発では、認証と認可は異なる役割を果たします。
+
+認証とは、ユーザーが本人であることを確認することです。ユーザー名やパスワードなど、自分が持っているもので自分の身元を証明することになります。
+次のステップは認可です。ユーザーの身元が確認されると、認可によってアプリケーションのどの部分の使用が許可されるかが決定されます。
+したがって、認証によってユーザーが誰であるかが確認され、認可によってアプリケーション内で実行できる内容やアクセスできる内容が決まります。
+
+## ログインルートの作成
+
+アプリケーションに `/login`という新しいルートを作成し、次のコードを貼り付けます。
+
+```JavaScript: app/login/page.tsx
+import AcmeLogo from '@/app/ui/acme-logo';
+import LoginForm from '@/app/ui/login-form';
+
+export default function LoginPage() {
+  return (
+    <main className="flex items-center justify-center md:h-screen">
+      <div className="relative mx-auto flex w-full max-w-[400px] flex-col space-y-2.5 p-4 md:-mt-32">
+        <div className="flex h-20 w-full items-end rounded-lg bg-blue-500 p-3 md:h-36">
+          <div className="w-32 text-white md:w-36">
+            <AcmeLogo />
+          </div>
+        </div>
+        <LoginForm />
+      </div>
+    </main>
+  );
+}
+```
+
+`LoginForm`については後で説明します。
+
+## NextAuth.js
+
+NextAuth.js を使用しますアプリケーションに認証を追加します。NextAuth.js は、セッション、サインインとサインアウト、および認証のその他の側面の管理に伴う複雑さの多くを抽象化します。これらの機能を手動で実装することもできますが、そのプロセスには時間がかかり、エラーが発生しやすくなります。NextAuth.js はプロセスを簡素化し、Next.js アプリケーションでの認証のための統合ソリューションを提供します。
+
+## NextAuth.js のセットアップ
+
+ターミナルで以下を実行.
+
+```bash:
+npm install next-auth@beta
+```
+
+ここでは、Next.js 14 と互換性のある`beta`バージョンの NextAuth.js をインストールします。
+
+次に、アプリケーションの秘密キーを生成します。このキーは Cookie の暗号化に使用され、ユーザー セッションのセキュリティが確保されます。これを行うには、ターミナルで次のコマンドを実行します。
+
+```bash:
+openssl rand -base64 32
+```
+
+次に、.envファイル内で、生成されたキーを`AUTH_SECRET`変数に追加します。
+
+```.env
+AUTH_SECRET=your-secret-key
+```
+
+実稼働環境で認証を機能させるには、Vercel プロジェクトの環境変数も更新する必要があります。このガイドを確認してくださいVercel に環境変数を追加する方法について説明します。
+[環境変数を追加](https://vercel.com/docs/projects/environment-variables)
+
+## ページオプションの追加
+
+`authConfig`オブジェクトをエクスポートする`auth.config.ts`ファイルをプロジェクトのルートに作成します。このオブジェクトには、NextAuth.js の構成オプションが含まれます。現時点では、`pages`オプションのみが含まれます。
+
+```JavaScript: /auth.config.ts
+import type { NextAuthConfig } from 'next-auth';
+
+export const authConfig = {
+  pages: {
+    signIn: '/login',
+  },
+};
+```
+
+`pages`オプションを使用して、カスタム サインイン、サインアウト、およびエラーページのルートを指定できます。これは必須ではありませんが、オプション`signIn: '/login'`を`pages`に追加すると、ユーザーは NextAuth.js のデフォルト ページではなく、カスタム ログイン ページにリダイレクトされます。
+
+## Next.jsミドルウェアでルートを保護する
+
+次に、ルートを保護するロジックを追加します。これにより、ユーザーはログインしない限りダッシュボード ページにアクセスできなくなります。
+
+`authorized`コールバックは、リクエストがNext.js Middleware経由でページにアクセスすることを許可されているかどうかを確認するために使用されます。これはリクエストが完了する前に呼び出され、`auth`および`request`プロパティを持つオブジェクトを受け取ります。`auth`プロパティにはユーザーのセッションが含まれ、`request`プロパティには受信リクエストが含まれます。
+
+`providers`オプションは、さまざまなログイン オプションをリストする配列です。現時点では、NextAuth 構成を満たすための空の配列です。詳細については、「資格情報プロバイダーの追加」セクションで説明します。
+
+次に、`authConfig`オブジェクトをミドルウェア ファイルにインポートする必要があります。プロジェクトのルートに `middleware.ts`というファイルを作成し、次のコードを貼り付けます。
+
+```JavaScript: /middleware.ts
+import NextAuth from 'next-auth';
+import { authConfig } from './auth.config';
+
+export default NextAuth(authConfig).auth;
+
+export const config = {
+  // https://nextjs.org/docs/app/building-your-application/routing/middleware#matcher
+  matcher: ['/((?!api|_next/static|_next/image|.*\\.png$).*)'],
+};
+```
+
+こでは、`authConfig`オブジェクトを使用して NextAuth.js を初期化し、`auth`プロパティをエクスポートしています。また、ミドルウェアの`matcher`オプションを使用して、特定のパスで実行するように指定しています。
+
+このタスクにミドルウェアを採用する利点は、ミドルウェアが認証を検証するまで保護されたルートのレンダリングが開始されず、アプリケーションのセキュリティとパフォーマンスの両方が向上することです。
+
+## パスワードのハッシュ化
+
+パスワードを安全に保存するには、パスワードをハッシュする必要があります。このプロセスにより、パスワードがランダムに見える固定長の文字列に変換され、ハッシュが公開された場合でもセキュリティ層が提供されます。
+
+`seed.js`ファイルでは、パスワードをデータベースに保存する前に`bcrypt`によってハッシュ化していました。再度`bcrypt`を使用すると、ユーザーが入力したパスワードがデータベース内のパスワードと一致するかどうかを比較できます。
+
+ただし、`bcrypt`はNode.js API に依存しており、これはNext.js ミドルウェアでは使用できません。これを解決するには、 `bcrypt`をインポートする別のファイルを作成する必要があります。この新しいファイルはミドルウェア ファイルにインポートされません。
+
+`authConfig`オブジェクトを展開する `auth.ts `という名前の新しいファイルを作成します。
+
+```JavaScript: /auth.ts
+import NextAuth from 'next-auth';
+import { authConfig } from './auth.config';
+
+export const { auth, signIn, signOut } = NextAuth({
+  ...authConfig,
+});
+```
+
+**知っておくとよいこと:**
+
+認証情報プロバイダーを使用していますが、一般的にはOAuthやeメールなどの代替プロバイダーを使用することをお勧めします。NextAuth.js のドキュメントを参照してください。オプションの完全なリストについては、こちらをご覧ください。
+
+## サインイン機能の追加
+
+`authorize`関数を使用して認証ロジックを処理できます。サーバー アクションと同様に、ユーザーがデータベースに存在するかどうかを確認する前に、電子メールとパスワードを検証するために`zod`使用できます。
+
+```JavaScript: /auth.ts
+import { z } from 'zod';
+
+export const { auth, signIn, signOut } = NextAuth({
+  ...authConfig,
+  providers: [
+    // 以下を変更
+    Credentials({
+      async authorize(credentials) {
+        const parsedCredentials = z
+          .object({ email: z.string().email(), password: z.string().min(6) })
+          .safeParse(credentials);
+      },
+    }),
+  ],
+});
+```
+
+資格情報を検証した後、データベースからユーザーにクエリを実行する新しい関数`getUser`を作成します。
+
+```JavaScript: /auth.ts
+import type { User } from '@/app/lib/definitions';
+import bcrypt from 'bcrypt';
+
+async function getUser(email: string): Promise<User | undefined> {
+  try {
+    const user = await sql<User>`SELECT * FROM users WHERE email=${email}`;
+    return user.rows[0];
+  } catch (error) {
+    console.error('Failed to fetch user:', error);
+    throw new Error('Failed to fetch user.');
+  }
+}
+
+export const { auth, signIn, signOut } = NextAuth({
+  ...authConfig,
+  providers: [
+    Credentials({
+      async authorize(credentials) {
+        const parsedCredentials = z
+          .object({ email: z.string().email(), password: z.string().min(6) })
+          .safeParse(credentials);
+
+        if (parsedCredentials.success) {
+          const { email, password } = parsedCredentials.data;
+          const user = await getUser(email);
+          if (!user) return null;
+        }
+
+        return null;
+      },
+    }),
+  ],
+});
+```
+
+次に、`bcrypt.compare`を呼び出してパスワードが一致するかどうかを確認します。
+
+```JavaScript: auth.ts
+import bcrypt from 'bcrypt';
+
+// ...
+
+export const { auth, signIn, signOut } = NextAuth({
+  ...authConfig,
+  providers: [
+    Credentials({
+      async authorize(credentials) {
+        // ...
+
+        if (parsedCredentials.success) {
+          const { email, password } = parsedCredentials.data;
+          const user = await getUser(email);
+          if (!user) return null;
+          // 以下を追加
+          const passwordsMatch = await bcrypt.compare(password, user.password);
+
+          if (passwordsMatch) return user;
+        }
+
+        console.log('Invalid credentials');
+        return null;
+      },
+    }),
+  ],
+});
+```
+
+最後に、パスワードが一致する場合はユーザーを返し、そうでない場合はnullユーザーがログインできないように返します。
+
+## ログインフォームの更新
+
+次に、認証ロジックをログイン フォームに接続する必要があります。`actions.ts`ファイル内に、 `authenticate`という新しいアクションを作成します。このアクションでは、`auth.ts`から`signIn`関数をインポートする必要があります。
+
+```JavaScript: /app/lib/actions.ts
+import { signIn } from '@/auth';
+
+// ...
+
+export async function authenticate(
+  prevState: string | undefined,
+  formData: FormData,
+) {
+  try {
+    await signIn('credentials', Object.fromEntries(formData));
+  } catch (error) {
+    if ((error as Error).message.includes('CredentialsSignin')) {
+      return 'CredentialsSignin';
+    }
+    throw error;
+  }
+}
+```
+
+`'CredentialsSignin'`エラーがある場合は、適切なエラー メッセージを表示できるように、エラーを返す必要があります。
+
+最後に、`login-form.tsx`コンポーネント内で、Reactの`useFormState` を使用してサーバー アクションを呼び出し、フォーム エラーを処理し、フォームの保留状態を処理するために`useFormStatus`を使用できます。
+
+```JavaScript: /app/ui/login-form.tsx
+'use client';
+
+import { useFormState, useFormStatus } from 'react-dom';
+import { authenticate } from '@/app/lib/actions';
+
+export default function LoginForm() {
+  const [state, dispatch] = useFormState(authenticate, undefined);
+
+  return (
+    <form action={dispatch} className="space-y-3">
+      <div className="flex-1 rounded-lg bg-gray-50 px-6 pb-4 pt-8">
+        <h1 className={`${lusitana.className} mb-3 text-2xl`}>
+          Please log in to continue.
+        </h1>
+        <div className="w-full">
+          // ...
+        </div>
+        <LoginButton />
+        <div
+          className="flex h-8 items-end space-x-1"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {state === 'CredentialsSignin' && (
+            <>
+              <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
+              <p className="text-sm text-red-500">Invalid credentials</p>
+            </>
+          )}
+        </div>
+      </div>
+    </form>
+  );
+}
+
+function LoginButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button className="mt-4 w-full" aria-disabled={pending}>
+      Log in <ArrowRightIcon className="ml-auto h-5 w-5 text-gray-50" />
+    </Button>
+  );
+}
+```
+
+## ログアウト機能の追加
+
+ログアウト機能を`<SideNav />`に追加するには、`auth.ts`の`<form>`要素内で`signOut`関数を呼び出します。
+
+```JavaScript: /app/ui/dashboard/sidenav.tsx
+import { signOut } from '@/auth';
+
+export default function SideNav() {
+  return (
+    <div className="flex h-full flex-col px-3 py-4 md:px-2">
+      // ...
+      <div className="flex grow flex-row justify-between space-x-2 md:flex-col md:space-x-0 md:space-y-2">
+        <NavLinks />
+        <div className="hidden h-auto w-full grow rounded-md bg-gray-50 md:block"></div>
+        <form
+          // 以下を追加
+          action={async () => {
+            'use server';
+            await signOut();
+          }}
+        >
+          <button className="flex h-[48px] grow items-center justify-center gap-2 rounded-md bg-gray-50 p-3 text-sm font-medium hover:bg-sky-100 hover:text-blue-600 md:flex-none md:justify-start md:p-2 md:px-3">
+            <PowerIcon className="w-6" />
+            <div className="hidden md:block">Sign Out</div>
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+```
