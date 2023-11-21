@@ -1448,3 +1448,146 @@ export default function SideNav() {
   );
 }
 ```
+
+# Chapter16
+
+メタデータの追加
+
+## メタデータとは何ですか?
+
+Web 開発では、メタデータは Web ページに関する追加の詳細を提供します。メタデータは、ページを訪問するユーザーには表示されません。代わりに、ページの HTML 内 (通常は`<head>`要素内) に埋め込まれ、舞台裏で動作します。この隠された情報は、Web ページのコンテンツをより深く理解する必要がある検索エンジンやその他のシステムにとって非常に重要です。
+
+## メタデータはなぜ重要ですか?
+
+メタデータは、Web ページの SEO を強化し、検索エンジンやソーシャル メディア プラットフォームにとって Web ページをよりアクセスしやすく、理解しやすくする上で重要な役割を果たします。適切なメタデータは、検索エンジンが Web ページのインデックスを効果的に作成し、検索結果でのランキングを向上させるのに役立ちます。さらに、Open Graph のようなメタデータにより、ソーシャル メディア上の共有リンクの外観が改善され、コンテンツがユーザーにとってより魅力的で有益なものになります。
+
+## メタデータの種類
+
+メタデータにはさまざまな種類があり、それぞれが独自の目的を果たします。一般的なタイプには次のようなものがあります。
+
+**タイトル メタデータ**: ブラウザー タブに表示される Web ページのタイトルを担当します。これは検索エンジンが Web ページの内容を理解するのに役立つため、SEO にとって非常に重要です。
+
+```HTML:
+<title>Page Title</title>
+```
+
+**説明メタデータ**: このメタデータは、Web ページのコンテンツの簡単な概要を提供し、多くの場合、検索エンジンの結果に表示されます。
+
+```HTML:
+<meta name="description" content="A brief description of the page content." />
+```
+
+**キーワード メタデータ**: このメタデータには、Web ページのコンテンツに関連するキーワードが含まれており、検索エンジンがページをインデックスするのに役立ちます。
+
+```HTML:
+<meta name="keywords" content="keyword1, keyword2, keyword3" />
+```
+
+**Open Graph メタデータ**: このメタデータは、ソーシャル メディア プラットフォームで共有される際の Web ページの表現方法を強化し、タイトル、説明、プレビュー画像などの情報を提供します。
+
+```HTML:
+<meta property="og:title" content="Title Here" />
+<meta property="og:description" content="Description Here" />
+<meta property="og:image" content="image_url_here" />
+```
+
+**ファビコン メタデータ**: このメタデータは、ブラウザのアドレス バーまたはタブに表示されるファビコン (小さなアイコン) を Web ページにリンクします。
+
+```HTML:
+<link rel="icon" href="path/to/favicon.ico" />
+```
+
+## メタデータの追加
+
+Next.js には、アプリケーションのメタデータを定義するために使用できるメタデータ API があります。アプリケーションにメタデータを追加するには、次の 2 つの方法があります。
+
+- 構成ベース: 静的`metadata`オブジェクトまたは動的`generateMetadata`関数を`layout.js`または`page.js`ファイルにエクスポートします。
+
+  - [静的metadata](https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadata-object)
+  - [動的generateMetadata](https://nextjs.org/docs/app/api-reference/functions/generate-metadata#generatemetadata-function)
+
+- ファイルベース: Next.js には、特にメタデータの目的で使用されるさまざまな特殊ファイルがあります。
+
+  - `favicon.ico`、`apple-icon.jpg`、`icon.jpg`: ファビコンとアイコンに使用されます
+  - `opengraph-image.jpg`および`twitter-image.jpg`: ソーシャルメディア画像に採用
+  - `robots.txt`: 検索エンジンのクロールの手順を説明します。
+  - `sitemap.xml`: ウェブサイトの構造に関する情報を提供します
+
+これらのファイルを静的メタデータとして柔軟に使用することも、プロジェクト内でプログラムによって生成することもできます。
+
+これらの両方のオプションを使用すると、Next.js はページに関連する`<head>`要素を自動的に生成します。
+
+## ファビコンとオープングラフの画像
+
+`/public`フォルダー内に、`favicon.ico`と `opengraph-image.jpg`の2 つの画像があることがわかります。
+
+これらの画像を`/app`フォルダーのルートに移動します。
+
+これを実行すると、Next.js はこれらのファイルを自動的に識別し、favicon および OG 画像として使用します。これは、開発ツールでアプリケーションの`<head>`要素をチェックすることで確認できます。
+
+**知っておくべきこと**: `ImageResponse`コンストラクターを使用して動的な OG イメージを作成することもできます。
+
+## ページのタイトルと説明
+
+`layout.js`または`page.js`ファイルから`metadata`オブジェクトを含めて、タイトルや説明などの追加のページ情報を追加することもできます。`layout.js`のメタデータは、それを使用するすべてのページに継承されます。
+
+ルート レイアウトで、次のフィールドを持つ新しい`metadata`オブジェクトを作成します。
+
+```JavaScript: /app/layout.tsx
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Acme Dashboard',
+  description: 'The official Next.js Course Dashboard, built with App Router.',
+  metadataBase: new URL('https://next-learn-dashboard.vercel.sh'),
+};
+
+export default function RootLayout() {
+  // ...
+}
+```
+
+Next.js は、タイトルとメタデータをアプリケーションに自動的に追加します。
+
+しかし、特定のページにカスタム タイトルを追加したい場合はどうすればよいでしょうか? metadataこれを行うには、ページ自体にオブジェクトを追加します。ネストされたページのメタデータは、親のメタデータをオーバーライドします。
+
+たとえば、`/dashboard/invoices`ページ内でページ タイトルを更新できます。
+
+```JavaScript: /app/dashboard/invoices/page.tex
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Invoices | Acme Dashboard',
+};
+```
+
+これは機能しますが、すべてのページでアプリケーションのタイトルを繰り返しています。会社名など、何かが変更された場合は、すべてのページで更新する必要があります。
+
+代わりに、`metadata`オブジェクト内の`title.template`フィールドを使用して、ページ タイトルのテンプレートを定義できます。このテンプレートには、ページ タイトルやその他の必要な情報を含めることができます。
+
+ルート レイアウトで、`metadata`オブジェクトを更新してテンプレートを含めます。
+
+```JavaScript: /app/layout.tsx
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: {
+    template: '%s | Acme Dashboard',
+    default: 'Acme Dashboard',
+  },
+  description: 'The official Next.js Learn Dashboard built with App Router.',
+  metadataBase: new URL('https://next-learn-dashboard.vercel.sh'),
+};
+```
+
+テンプレート内の`%s`は、特定のページ タイトルに置き換えられます。
+
+これで、`/dashboard/invoices`ページにページ タイトルを追加できます。
+
+```JavaScript: /app/dashboard/invoices/page.tsx
+export const metadata: Metadata = {
+  title: 'Invoices',
+};
+```
+
+`/dashboard/invoices`ページに移動して`<head>`要素を確認します。ページのタイトルが`Invoices | Acme Dashboard` になっていることがわかります。
